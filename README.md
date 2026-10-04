@@ -180,11 +180,6 @@ npm run build
 - [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md)
 - [DEMO_GUIDE.md](DEMO_GUIDE.md)
 
-## Resume-ready description
-
-**Data Center Infrastructure Monitoring & Observability Platform | Python, FastAPI, React, Prometheus, Grafana, Docker, PostgreSQL**
-
-Built an enterprise-style Linux infrastructure monitoring platform using Prometheus and Node Exporter for real-time telemetry, Alertmanager for severity-based alert routing, Grafana for historical observability, and a React/FastAPI Operations Center with JWT/RBAC, audit logging, safe diagnostics, maintenance windows and an experimental anomaly-detection module.
 
 
 ## future work
