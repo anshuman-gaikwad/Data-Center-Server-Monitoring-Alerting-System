@@ -186,14 +186,8 @@ npm run build
 
 Built an enterprise-style Linux infrastructure monitoring platform using Prometheus and Node Exporter for real-time telemetry, Alertmanager for severity-based alert routing, Grafana for historical observability, and a React/FastAPI Operations Center with JWT/RBAC, audit logging, safe diagnostics, maintenance windows and an experimental anomaly-detection module.
 
-### Strong resume bullets
-- Built a multi-server Linux observability platform using **Prometheus, Node Exporter, Grafana and Alertmanager**, monitoring CPU, memory, disk, network, availability, load and temperature where supported.
-- Developed a secure **FastAPI + React Operations Center** with JWT authentication, RBAC, bcrypt password hashing, audit logging, REST/OpenAPI endpoints and responsive enterprise-style UI.
-- Containerized the platform with **Docker Compose and PostgreSQL**, adding health checks, persistent volumes, environment-driven secrets and production-style Nginx frontend serving.
-- Implemented severity-based **warning/critical/emergency Prometheus alert rules**, email/webhook-ready Alertmanager routing, maintenance concepts and an experimental anomaly-analysis module.
-- Added CI validation for backend tests, frontend builds, Docker configuration and monitoring configuration to demonstrate practical DevOps engineering.
 
-## Portfolio scope / future work
+## future work
 
 - Kubernetes and Windows Exporter monitoring.
 - Service discovery instead of static targets.
