@@ -1,0 +1,134 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: monitoring
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U monitor -d monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: dc-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports: ["9090:9090"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    healthcheck:
+      test: ["CMD-SHELL","wget -qO- http://localhost:9090/-/healthy >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [monitoring]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: dc-alertmanager
+    restart: unless-stopped
+    environment:
+      SMTP_SMARTHOST: ${SMTP_SMARTHOST:-smtp.example.com:587}
+      SMTP_FROM: ${SMTP_FROM:-monitor@example.com}
+      SMTP_AUTH_USERNAME: ${SMTP_AUTH_USERNAME:-monitor@example.com}
+      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD:-change-me-smtp}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-ops@example.com}
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --config.expand-env
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports: ["9093:9093"]
+    healthcheck:
+      test: ["CMD-SHELL","wget -qO- http://localhost:9093/-/healthy >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: dc-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["3000:3000"]
+    depends_on: {prometheus: {condition: service_healthy}}
+    healthcheck:
+      test: ["CMD-SHELL","wget -qO- http://localhost:3000/api/health >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks: [monitoring]
+
+  backend:
+    build: ./backend
+    container_name: dc-monitor-api
+    restart: unless-stopped
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      ALERTMANAGER_URL: http://alertmanager:9093
+      DATABASE_URL: postgresql+psycopg2://monitor:${POSTGRES_PASSWORD:-change-me-db}@postgres:5432/monitoring
+      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-operator}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD:-viewer}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      DEMO_MODE: ${DEMO_MODE:-true}
+    volumes:
+      - /var/log:/var/log:ro
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      prometheus: {condition: service_healthy}
+      alertmanager: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL","python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks: [monitoring]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: dc-monitor-ui
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports: ["5173:80"]
+    depends_on: [backend]
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

@@ -1,0 +1,114 @@
+groups:
+  - name: server-health
+    rules:
+      - alert: ServerDown
+        expr: up{job="linux-servers"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Linux server is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      - alert: NodeExporterUnavailable
+        expr: up{job="linux-servers"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Node Exporter unavailable"
+          description: "Prometheus cannot scrape Node Exporter on {{ $labels.instance }}."
+
+      - alert: HighCPUWarning
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{job="linux-servers",mode="idle"}[5m])) * 100) > 70
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "CPU above 70%"
+          description: "{{ $labels.instance }} CPU usage is above 70%."
+
+      - alert: HighCPUCritical
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{job="linux-servers",mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "CPU above 90%"
+          description: "{{ $labels.instance }} CPU usage is above 90%."
+
+      - alert: HighMemoryWarning
+        expr: 100 * (1 - node_memory_MemAvailable_bytes{job="linux-servers"} / node_memory_MemTotal_bytes{job="linux-servers"}) > 75
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Memory above 75%"
+          description: "{{ $labels.instance }} memory usage is above 75%."
+
+      - alert: HighMemoryCritical
+        expr: 100 * (1 - node_memory_MemAvailable_bytes{job="linux-servers"} / node_memory_MemTotal_bytes{job="linux-servers"}) > 90
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Memory above 90%"
+          description: "{{ $labels.instance }} memory usage is above 90%."
+
+      - alert: DiskSpaceWarning
+        expr: 100 * (1 - node_filesystem_avail_bytes{job="linux-servers",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="linux-servers",fstype!~"tmpfs|overlay"}) > 80
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Disk above 80%"
+          description: "{{ $labels.instance }} has a filesystem above 80% usage."
+
+      - alert: DiskSpaceCritical
+        expr: 100 * (1 - node_filesystem_avail_bytes{job="linux-servers",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="linux-servers",fstype!~"tmpfs|overlay"}) > 90
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Disk above 90%"
+          description: "{{ $labels.instance }} has a filesystem above 90% usage."
+
+      - alert: DiskSpaceEmergency
+        expr: 100 * (1 - node_filesystem_avail_bytes{job="linux-servers",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="linux-servers",fstype!~"tmpfs|overlay"}) > 95
+        for: 2m
+        labels: {severity: emergency}
+        annotations:
+          summary: "Disk above 95%"
+          description: "{{ $labels.instance }} has a filesystem above 95% usage."
+
+      - alert: HighLoad
+        expr: node_load5{job="linux-servers"} / count by(instance) (node_cpu_seconds_total{job="linux-servers",mode="idle"}) > 2
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "High system load"
+          description: "{{ $labels.instance }} has sustained high load."
+
+      - alert: NetworkErrors
+        expr: (increase(node_network_receive_errs_total{job="linux-servers"}[5m]) + increase(node_network_transmit_errs_total{job="linux-servers"}[5m])) > 10
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Network errors detected"
+          description: "{{ $labels.instance }} has elevated network errors."
+
+      - alert: NetworkDrops
+        expr: (increase(node_network_receive_drop_total{job="linux-servers"}[5m]) + increase(node_network_transmit_drop_total{job="linux-servers"}[5m])) > 10
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Network packet drops detected"
+          description: "{{ $labels.instance }} has elevated packet drops."
+
+      - alert: HighTemperature
+        expr: max by(instance) (node_hwmon_temp_celsius{job="linux-servers"}) > 80
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "High hardware temperature"
+          description: "{{ $labels.instance }} reports a temperature above 80°C."
+
+      - alert: PrometheusTargetMissing
+        expr: absent(up{job="linux-servers"})
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "No Linux monitoring targets"
+          description: "Prometheus currently has no Linux server target data."
